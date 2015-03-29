@@ -35,14 +35,14 @@
 static bool convDone = false;
 static uint16_t convOverrun = 0;
 
-// EXTI14 for BMP085 End of Conversion Interrupt
-void EXTI15_10_IRQHandler(void)
-{
-    if (EXTI_GetITStatus(EXTI_Line14) == SET) {
-        EXTI_ClearITPendingBit(EXTI_Line14);
-        convDone = true;
-    }
-}
+// // EXTI14 for BMP085 End of Conversion Interrupt
+// void EXTI15_10_IRQHandler(void)
+// {
+//     if (EXTI_GetITStatus(EXTI_Line14) == SET) {
+//         EXTI_ClearITPendingBit(EXTI_Line14);
+//         convDone = true;
+//     }
+// }
 
 typedef struct {
     int16_t ac1;

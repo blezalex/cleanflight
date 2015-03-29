@@ -177,6 +177,7 @@ static const mpu6050Config_t *mpu6050Config = NULL;
 
 void mpu6050GpioInit(void) {
     gpio_config_t gpio;
+    EXTI_InitTypeDef EXTIInit;
 
 #ifdef STM32F303
         if (mpu6050Config->gpioAHBPeripherals) {
@@ -194,6 +195,19 @@ void mpu6050GpioInit(void) {
     gpio.speed = Speed_2MHz;
     gpio.mode = Mode_IN_FLOATING;
     gpioInit(mpu6050Config->gpioPort, &gpio);
+
+
+    gpioExtiLineConfig(GPIO_PortSourceGPIOC, GPIO_PinSource13);
+
+    EXTI_ClearITPendingBit(EXTI_Line13);
+
+    EXTIInit.EXTI_Line = EXTI_Line13;
+    EXTIInit.EXTI_Mode = EXTI_Mode_Interrupt;
+    EXTIInit.EXTI_Trigger = EXTI_Trigger_Rising;
+    EXTIInit.EXTI_LineCmd = ENABLE;
+    EXTI_Init(&EXTIInit);
+
+    NVIC_EnableIRQ(EXTI15_10_IRQn);
 }
 
 static bool mpu6050Detect(void)
@@ -345,6 +359,8 @@ static void mpu6050GyroInit(void)
 
     i2cWrite(MPU6050_ADDRESS, MPU_RA_INT_PIN_CFG,
             0 << 7 | 0 << 6 | 0 << 5 | 0 << 4 | 0 << 3 | 0 << 2 | 1 << 1 | 0 << 0); // INT_PIN_CFG   -- INT_LEVEL_HIGH, INT_OPEN_DIS, LATCH_INT_DIS, INT_RD_CLEAR_DIS, FSYNC_INT_LEVEL_HIGH, FSYNC_INT_DIS, I2C_BYPASS_EN, CLOCK_DIS
+
+    i2cWrite(MPU6050_ADDRESS, MPU_RA_INT_ENABLE, 1 << 0);  // DATA_RDY_EN enable
 }
 
 static void mpu6050GyroRead(int16_t *gyroData)

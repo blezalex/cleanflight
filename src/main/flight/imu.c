@@ -305,10 +305,11 @@ void imuUpdate(rollAndPitchTrims_t *accelerometerTrims, uint8_t mixerMode)
     static int16_t gyroYawSmooth = 0;
 
     gyroUpdate();
-    if (sensors(SENSOR_ACC)) {
-        updateAccelerationReadings(accelerometerTrims); // TODO rename to accelerometerUpdate and rename many other 'Acceleration' references to be 'Accelerometer'
-        imuCalculateEstimatedAttitude();
-    } else {
+    // if (sensors(SENSOR_ACC)) {
+    //      updateAccelerationReadings(accelerometerTrims); // TODO rename to accelerometerUpdate and rename many other 'Acceleration' references to be 'Accelerometer'
+    //      imuCalculateEstimatedAttitude();
+    // } else 
+    {
         accADC[X] = 0;
         accADC[Y] = 0;
         accADC[Z] = 0;

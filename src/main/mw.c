@@ -622,6 +622,52 @@ void processRx(void)
     }
 }
 
+bool loopFinished = false;
+uint32_t cnt = 0;
+
+// gyro interrupt
+void EXTI15_10_IRQHandler(void)
+{
+    if (EXTI_GetITStatus(EXTI_Line13) == SET) {
+        EXTI_ClearITPendingBit(EXTI_Line13);
+        
+        if (loopFinished)
+        {
+            imuUpdate(&currentProfile->accelerometerTrims, masterConfig.mixerMode);
+
+            // PID - note this is function pointer set by setPIDController()
+            pid_controller(
+                &currentProfile->pidProfile,
+                currentControlRateProfile,
+                masterConfig.max_angle_inclination,
+                &currentProfile->accelerometerTrims,
+                &masterConfig.rxConfig
+            );
+
+            mixTable();
+           // writeServos();
+
+            if (cnt < 10000)
+            {
+                cnt++;
+
+                if ((cnt % 2) == 0)
+                {
+                    writeMotors();            
+                }
+            }
+            else
+            {
+                writeMotors(); 
+            }
+        }
+        
+        currentTime = micros();
+        cycleTime = (int32_t)(currentTime - previousTime);
+        previousTime = currentTime;
+    }
+}
+
 void loop(void)
 {
     static uint32_t loopTime;
@@ -670,12 +716,10 @@ void loop(void)
     if (masterConfig.looptime == 0 || (int32_t)(currentTime - loopTime) >= 0) {
         loopTime = currentTime + masterConfig.looptime;
 
-        imuUpdate(&currentProfile->accelerometerTrims, masterConfig.mixerMode);
-
         // Measure loop rate just after reading the sensors
-        currentTime = micros();
-        cycleTime = (int32_t)(currentTime - previousTime);
-        previousTime = currentTime;
+     //   currentTime = micros();
+     //  cycleTime = (int32_t)(currentTime - previousTime);
+     //  previousTime = currentTime;
 
         annexCode();
 #if defined(BARO) || defined(SONAR)
@@ -712,18 +756,10 @@ void loop(void)
         }
 #endif
 
-        // PID - note this is function pointer set by setPIDController()
-        pid_controller(
-            &currentProfile->pidProfile,
-            currentControlRateProfile,
-            masterConfig.max_angle_inclination,
-            &currentProfile->accelerometerTrims,
-            &masterConfig.rxConfig
-        );
-
-        mixTable();
-        writeServos();
-        writeMotors();
+        if (!loopFinished)
+        {
+            loopFinished = true;
+        }
 
 #ifdef BLACKBOX
         if (!cliMode && feature(FEATURE_BLACKBOX)) {
