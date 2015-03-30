@@ -622,7 +622,6 @@ void processRx(void)
     }
 }
 
-bool loopFinished = false;
 uint32_t cnt = 0;
 
 // gyro interrupt
@@ -631,36 +630,34 @@ void EXTI15_10_IRQHandler(void)
     if (EXTI_GetITStatus(EXTI_Line13) == SET) {
         EXTI_ClearITPendingBit(EXTI_Line13);
         
-        if (loopFinished)
+        imuUpdate(&currentProfile->accelerometerTrims, masterConfig.mixerMode);
+
+        // PID - note this is function pointer set by setPIDController()
+        pid_controller(
+            &currentProfile->pidProfile,
+            currentControlRateProfile,
+            masterConfig.max_angle_inclination,
+            &currentProfile->accelerometerTrims,
+            &masterConfig.rxConfig
+        );
+
+        mixTable();
+       // writeServos();
+
+        if (cnt < 10000) // HACK: Run at half rate first N iterations to allow BLHEli auto detect oneshot
         {
-            imuUpdate(&currentProfile->accelerometerTrims, masterConfig.mixerMode);
+            cnt++;
 
-            // PID - note this is function pointer set by setPIDController()
-            pid_controller(
-                &currentProfile->pidProfile,
-                currentControlRateProfile,
-                masterConfig.max_angle_inclination,
-                &currentProfile->accelerometerTrims,
-                &masterConfig.rxConfig
-            );
-
-            mixTable();
-           // writeServos();
-
-            if (cnt < 10000)
+            if ((cnt % 2) == 0)
             {
-                cnt++;
-
-                if ((cnt % 2) == 0)
-                {
-                    writeMotors();            
-                }
-            }
-            else
-            {
-                writeMotors(); 
+                writeMotors();
             }
         }
+        else
+        {
+            writeMotors();
+        }
+
         
         currentTime = micros();
         cycleTime = (int32_t)(currentTime - previousTime);
@@ -755,11 +752,6 @@ void loop(void)
             }
         }
 #endif
-
-        if (!loopFinished)
-        {
-            loopFinished = true;
-        }
 
 #ifdef BLACKBOX
         if (!cliMode && feature(FEATURE_BLACKBOX)) {

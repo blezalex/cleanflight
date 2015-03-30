@@ -26,6 +26,7 @@ typedef struct mpu6050Config_s {
 #endif
     uint16_t gpioPin;
     GPIO_TypeDef *gpioPort;
+    uint8_t gpioPortSource;
 } mpu6050Config_t;
 
 bool mpu6050AccDetect(const mpu6050Config_t *config,acc_t *acc);

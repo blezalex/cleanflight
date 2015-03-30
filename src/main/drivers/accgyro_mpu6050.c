@@ -196,8 +196,7 @@ void mpu6050GpioInit(void) {
     gpio.mode = Mode_IN_FLOATING;
     gpioInit(mpu6050Config->gpioPort, &gpio);
 
-
-    gpioExtiLineConfig(GPIO_PortSourceGPIOC, GPIO_PinSource13);
+    gpioExtiLineConfig(mpu6050Config->gpioPortSource, GPIO_PinSource13);
 
     EXTI_ClearITPendingBit(EXTI_Line13);
 

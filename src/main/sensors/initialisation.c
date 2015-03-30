@@ -80,12 +80,14 @@ const mpu6050Config_t *selectMPU6050Config(void)
     static const mpu6050Config_t nazeRev4MPU6050Config = {
             .gpioAPB2Peripherals = RCC_APB2Periph_GPIOB,
             .gpioPort = GPIOB,
-            .gpioPin = Pin_13
+            .gpioPin = Pin_13,
+            .gpioPortSource = GPIO_PortSourceGPIOB
     };
     static const mpu6050Config_t nazeRev5MPU6050Config = {
             .gpioAPB2Peripherals = RCC_APB2Periph_GPIOC,
             .gpioPort = GPIOC,
-            .gpioPin = Pin_13
+            .gpioPin = Pin_13,
+            .gpioPortSource = GPIO_PortSourceGPIOC
     };
 
 
