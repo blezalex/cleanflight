@@ -258,7 +258,7 @@ static void imuCalculateEstimatedAttitude(void)
     }
     accMag = accMag * 100 / ((int32_t)acc_1G * acc_1G);
 
-    rotateV(&EstG.V, &deltaGyroAngle);
+    rotateVSmallAngle(&EstG.V, &deltaGyroAngle);
 
     // Apply complimentary filter (Gyro drift correction)
     // If accel magnitude >1.15G or <0.85G and ACC vector outside of the limit range => we neutralize the effect of accelerometers in the angle estimation.
@@ -284,7 +284,7 @@ static void imuCalculateEstimatedAttitude(void)
     inclination.values.pitchDeciDegrees = lrintf(anglerad[AI_PITCH] * (1800.0f / M_PIf));
 
     if (sensors(SENSOR_MAG)) {
-        rotateV(&EstM.V, &deltaGyroAngle);
+        rotateVSmallAngle(&EstM.V, &deltaGyroAngle);
         // FIXME what does the _M_ mean?
         float invGyroComplimentaryFilter_M_Factor = (1.0f / (imuRuntimeConfig->gyro_cmpfm_factor + 1.0f));
         for (axis = 0; axis < 3; axis++) {
@@ -292,28 +292,20 @@ static void imuCalculateEstimatedAttitude(void)
         }
         heading = imuCalculateHeading(&EstM);
     } else {
-        rotateV(&EstN.V, &deltaGyroAngle);
+        rotateVSmallAngle(&EstN.V, &deltaGyroAngle);
         normalizeV(&EstN.V, &EstN.V);
         heading = imuCalculateHeading(&EstN);
     }
 
-    imuCalculateAcceleration(deltaT); // rotate acc vector into earth frame
+ //   imuCalculateAcceleration(deltaT); // rotate acc vector into earth frame
 }
 
-void imuUpdate(rollAndPitchTrims_t *accelerometerTrims, uint8_t mixerMode)
+
+void imuUpdateGyro(uint8_t mixerMode)
 {
     static int16_t gyroYawSmooth = 0;
 
     gyroUpdate();
-    // if (sensors(SENSOR_ACC)) {
-    //      updateAccelerationReadings(accelerometerTrims); // TODO rename to accelerometerUpdate and rename many other 'Acceleration' references to be 'Accelerometer'
-    //      imuCalculateEstimatedAttitude();
-    // } else 
-    {
-        accADC[X] = 0;
-        accADC[Y] = 0;
-        accADC[Z] = 0;
-    }
 
     gyroData[FD_ROLL] = gyroADC[FD_ROLL];
     gyroData[FD_PITCH] = gyroADC[FD_PITCH];
@@ -323,6 +315,19 @@ void imuUpdate(rollAndPitchTrims_t *accelerometerTrims, uint8_t mixerMode)
         gyroYawSmooth = gyroData[FD_YAW];
     } else {
         gyroData[FD_YAW] = gyroADC[FD_YAW];
+    }
+}
+
+void imuUpdate(rollAndPitchTrims_t *accelerometerTrims, uint8_t mixerMode)
+{
+    if (sensors(SENSOR_ACC)) {
+         updateAccelerationReadings(accelerometerTrims); // TODO rename to accelerometerUpdate and rename many other 'Acceleration' references to be 'Accelerometer'
+         imuCalculateEstimatedAttitude();
+    } else 
+    {
+        accADC[X] = 0;
+        accADC[Y] = 0;
+        accADC[Z] = 0;
     }
 }
 

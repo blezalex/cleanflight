@@ -72,3 +72,5 @@ int16_t imuCalculateHeading(t_fp_vector *vec);
 void imuResetAccelerationSum(void);
 
 
+void imuUpdateGyro(uint8_t mixerMode);
+

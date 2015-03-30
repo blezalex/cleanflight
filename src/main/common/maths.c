@@ -141,3 +141,38 @@ void rotateV(struct fp_vector *v, fp_angles_t *delta)
     v->Z = v_tmp.X * mat[0][2] + v_tmp.Y * mat[1][2] + v_tmp.Z * mat[2][2];
 }
 
+// Rotate a vector *v by the euler angles defined by the 3-vector *delta. Using small angle approximation
+void rotateVSmallAngle(struct fp_vector *v, fp_angles_t *delta)
+{
+    struct fp_vector v_tmp = *v;
+
+    float mat[3][3];
+    float cosx, sinx, cosy, siny, cosz, sinz;
+    float coszcosx, sinzcosx, coszsinx, sinzsinx;
+
+    cosx = 1;
+    sinx = delta->angles.roll;
+    cosy = 1;
+    siny = delta->angles.pitch;
+    cosz = 1;
+    sinz = delta->angles.yaw;
+
+    coszcosx = cosz * cosx;
+    sinzcosx = sinz * cosx;
+    coszsinx = sinx * cosz;
+    sinzsinx = sinx * sinz;
+
+    mat[0][0] = cosz * cosy;
+    mat[0][1] = -cosy * sinz;
+    mat[0][2] = siny;
+    mat[1][0] = sinzcosx + (coszsinx * siny);
+    mat[1][1] = coszcosx - (sinzsinx * siny);
+    mat[1][2] = -sinx * cosy;
+    mat[2][0] = (sinzsinx) - (coszcosx * siny);
+    mat[2][1] = (coszsinx) + (sinzcosx * siny);
+    mat[2][2] = cosy * cosx;
+
+    v->X = v_tmp.X * mat[0][0] + v_tmp.Y * mat[1][0] + v_tmp.Z * mat[2][0];
+    v->Y = v_tmp.X * mat[0][1] + v_tmp.Y * mat[1][1] + v_tmp.Z * mat[2][1];
+    v->Z = v_tmp.X * mat[0][2] + v_tmp.Y * mat[1][2] + v_tmp.Z * mat[2][2];
+}

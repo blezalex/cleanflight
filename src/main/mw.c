@@ -630,7 +630,7 @@ void EXTI15_10_IRQHandler(void)
     if (EXTI_GetITStatus(EXTI_Line13) == SET) {
         EXTI_ClearITPendingBit(EXTI_Line13);
         
-        imuUpdate(&currentProfile->accelerometerTrims, masterConfig.mixerMode);
+        imuUpdateGyro(masterConfig.mixerMode);
 
         // PID - note this is function pointer set by setPIDController()
         pid_controller(
@@ -658,7 +658,9 @@ void EXTI15_10_IRQHandler(void)
             writeMotors();
         }
 
-        
+        // update angle calculation after sending updates to motors, these calcualtions will be used in the next loop
+        imuUpdate(&currentProfile->accelerometerTrims, masterConfig.mixerMode);
+
         currentTime = micros();
         cycleTime = (int32_t)(currentTime - previousTime);
         previousTime = currentTime;
