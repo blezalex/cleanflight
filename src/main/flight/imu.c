@@ -300,6 +300,77 @@ static void imuCalculateEstimatedAttitude(void)
  //   imuCalculateAcceleration(deltaT); // rotate acc vector into earth frame
 }
 
+static void imuCalculateEstimatedAttitudeOld(void)
+{
+    int32_t axis;
+    int32_t accMag = 0;
+    static t_fp_vector EstM;
+    static t_fp_vector EstN = { .A = { 1.0f, 0.0f, 0.0f } };
+    static float accLPF[3];
+    static uint32_t previousT;
+    uint32_t currentT = micros();
+    uint32_t deltaT;
+    float scale;
+    fp_angles_t deltaGyroAngle;
+    deltaT = currentT - previousT;
+    scale = deltaT * gyroScaleRad;
+    previousT = currentT;
+
+    // Initialization
+    for (axis = 0; axis < 3; axis++) {
+        deltaGyroAngle.raw[axis] = gyroADC[axis] * scale;
+        if (imuRuntimeConfig->acc_lpf_factor > 0) {
+            accLPF[axis] = accLPF[axis] * (1.0f - (1.0f / imuRuntimeConfig->acc_lpf_factor)) + accADC[axis] * (1.0f / imuRuntimeConfig->acc_lpf_factor);
+            accSmooth[axis] = accLPF[axis];
+        } else {
+            accSmooth[axis] = accADC[axis];
+        }
+        accMag += (int32_t)accSmooth[axis] * accSmooth[axis];
+    }
+    accMag = accMag * 100 / ((int32_t)acc_1G * acc_1G);
+
+    rotateV(&EstG.V, &deltaGyroAngle);
+
+    // Apply complimentary filter (Gyro drift correction)
+    // If accel magnitude >1.15G or <0.85G and ACC vector outside of the limit range => we neutralize the effect of accelerometers in the angle estimation.
+    // To do that, we just skip filter, as EstV already rotated by Gyro
+
+    float invGyroComplimentaryFilterFactor = (1.0f / (imuRuntimeConfig->gyro_cmpf_factor + 1.0f));
+
+    if (72 < (uint16_t)accMag && (uint16_t)accMag < 133) {
+        for (axis = 0; axis < 3; axis++)
+            EstG.A[axis] = (EstG.A[axis] * imuRuntimeConfig->gyro_cmpf_factor + accSmooth[axis]) * invGyroComplimentaryFilterFactor;
+    }
+
+    if (EstG.A[Z] > smallAngle) {
+        ENABLE_STATE(SMALL_ANGLE);
+    } else {
+        DISABLE_STATE(SMALL_ANGLE);
+    }
+
+    // Attitude of the estimated vector
+    anglerad[AI_ROLL] = atan2f(EstG.V.Y, EstG.V.Z);
+    anglerad[AI_PITCH] = atan2f(-EstG.V.X, sqrtf(EstG.V.Y * EstG.V.Y + EstG.V.Z * EstG.V.Z));
+    inclination.values.rollDeciDegrees = lrintf(anglerad[AI_ROLL] * (1800.0f / M_PIf));
+    inclination.values.pitchDeciDegrees = lrintf(anglerad[AI_PITCH] * (1800.0f / M_PIf));
+
+    if (sensors(SENSOR_MAG)) {
+        rotateV(&EstM.V, &deltaGyroAngle);
+        // FIXME what does the _M_ mean?
+        float invGyroComplimentaryFilter_M_Factor = (1.0f / (imuRuntimeConfig->gyro_cmpfm_factor + 1.0f));
+        for (axis = 0; axis < 3; axis++) {
+            EstM.A[axis] = (EstM.A[axis] * imuRuntimeConfig->gyro_cmpfm_factor + magADC[axis]) * invGyroComplimentaryFilter_M_Factor;
+        }
+        heading = imuCalculateHeading(&EstM);
+    } else {
+        rotateV(&EstN.V, &deltaGyroAngle);
+        normalizeV(&EstN.V, &EstN.V);
+        heading = imuCalculateHeading(&EstN);
+    }
+
+    imuCalculateAcceleration(deltaT); // rotate acc vector into earth frame
+}
+
 
 void imuUpdateGyro(uint8_t mixerMode)
 {
@@ -328,6 +399,31 @@ void imuUpdate(rollAndPitchTrims_t *accelerometerTrims, uint8_t mixerMode)
         accADC[X] = 0;
         accADC[Y] = 0;
         accADC[Z] = 0;
+    }
+}
+
+void imuUpdateOld(rollAndPitchTrims_t *accelerometerTrims, uint8_t mixerMode)
+{
+    static int16_t gyroYawSmooth = 0;
+    gyroUpdate();
+    
+    if (sensors(SENSOR_ACC)) {
+        updateAccelerationReadings(accelerometerTrims); // TODO rename to accelerometerUpdate and rename many other 'Acceleration' references to be 'Accelerometer'
+        imuCalculateEstimatedAttitudeOld();
+    } else {
+        accADC[X] = 0;
+        accADC[Y] = 0;
+        accADC[Z] = 0;
+    }
+
+    gyroData[FD_ROLL] = gyroADC[FD_ROLL];
+    gyroData[FD_PITCH] = gyroADC[FD_PITCH];
+    
+    if (mixerMode == MIXER_TRI) {
+        gyroData[FD_YAW] = (gyroYawSmooth * 2 + gyroADC[FD_YAW]) / 3;
+        gyroYawSmooth = gyroData[FD_YAW];
+    } else {
+        gyroData[FD_YAW] = gyroADC[FD_YAW];
     }
 }
 

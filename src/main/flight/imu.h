@@ -74,3 +74,5 @@ void imuResetAccelerationSum(void);
 
 void imuUpdateGyro(uint8_t mixerMode);
 
+void imuUpdateOld(rollAndPitchTrims_t *accelerometerTrims, uint8_t mixerMode);
+

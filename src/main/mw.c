@@ -627,6 +627,11 @@ void EXTI15_10_IRQHandler(void)
 {
     if (EXTI_GetITStatus(EXTI_Line13) == SET) {
         EXTI_ClearITPendingBit(EXTI_Line13);
+
+        if (!IS_RC_MODE_ACTIVE(BOXOSD))
+        {
+            return;
+        }
         
         imuUpdateGyro(masterConfig.mixerMode);
 
@@ -714,10 +719,14 @@ void loop(void)
     if (masterConfig.looptime == 0 || (int32_t)(currentTime - loopTime) >= 0) {
         loopTime = currentTime + masterConfig.looptime;
 
-        // Measure loop rate just after reading the sensors
-     //   currentTime = micros();
-     //  cycleTime = (int32_t)(currentTime - previousTime);
-     //  previousTime = currentTime;
+        if (!IS_RC_MODE_ACTIVE(BOXOSD))
+        {
+            imuUpdateOld(&currentProfile->accelerometerTrims, masterConfig.mixerMode);
+            // Measure loop rate just after reading the sensors
+            currentTime = micros();
+            cycleTime = (int32_t)(currentTime - previousTime);
+            previousTime = currentTime;
+        }
 
         annexCode();
 #if defined(BARO) || defined(SONAR)
@@ -753,6 +762,20 @@ void loop(void)
             }
         }
 #endif
+        if (!IS_RC_MODE_ACTIVE(BOXOSD))
+        {
+             // PID - note this is function pointer set by setPIDController()
+            pid_controller(
+            &currentProfile->pidProfile,
+            currentControlRateProfile,
+            masterConfig.max_angle_inclination,
+            &currentProfile->accelerometerTrims,
+            &masterConfig.rxConfig
+            );
+            mixTable();
+            writeServos();
+            writeMotors();
+        }
 
 #ifdef BLACKBOX
         if (!cliMode && feature(FEATURE_BLACKBOX)) {
