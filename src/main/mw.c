@@ -622,8 +622,6 @@ void processRx(void)
     }
 }
 
-uint32_t cnt = 0;
-
 // gyro interrupt
 void EXTI15_10_IRQHandler(void)
 {
@@ -642,13 +640,12 @@ void EXTI15_10_IRQHandler(void)
         );
 
         mixTable();
-       // writeServos();
-
-        if (cnt < 10000) // HACK: Run at half rate first N iterations to allow BLHEli auto detect oneshot
+        
+        if (!ARMING_FLAG(ARMED)) // HACK: Run at half rate when not armed, this allows proper oneshot detection by escs
         {
-            cnt++;
+            static uint8_t iterationCounter;
 
-            if ((cnt % 2) == 0)
+            if (iterationCounter++ % 2)
             {
                 writeMotors();
             }
@@ -657,6 +654,8 @@ void EXTI15_10_IRQHandler(void)
         {
             writeMotors();
         }
+
+        writeServos();
 
         // update angle calculation after sending updates to motors, these calcualtions will be used in the next loop
         imuUpdate(&currentProfile->accelerometerTrims, masterConfig.mixerMode);
