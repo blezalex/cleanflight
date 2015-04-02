@@ -622,13 +622,15 @@ void processRx(void)
     }
 }
 
+bool initComplete = false;
+
 // gyro interrupt
 void EXTI15_10_IRQHandler(void)
 {
     if (EXTI_GetITStatus(EXTI_Line13) == SET) {
         EXTI_ClearITPendingBit(EXTI_Line13);
 
-        if (!IS_RC_MODE_ACTIVE(BOXOSD))
+        if (!IS_RC_MODE_ACTIVE(BOXOSD) || !initComplete)
         {
             return;
         }
@@ -673,6 +675,8 @@ void EXTI15_10_IRQHandler(void)
 
 void loop(void)
 {
+    initComplete = true;
+
     static uint32_t loopTime;
 #if defined(BARO) || defined(SONAR)
     static bool haveProcessedAnnexCodeOnce = false;
